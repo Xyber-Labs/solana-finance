@@ -171,10 +171,7 @@ declare const _default: {
     create(provider: anchor.Provider, program: Program<PaymentProcessor>): {
         getGlobalConfigPda: () => [PublicKey, number];
         getOperationPda: (paymentType: number) => [PublicKey, number];
-        initialize: (args: {
-            acceptedMint: PublicKey;
-            promptPrice: anchor.BN;
-        }) => Promise<{
+        initialize: (newAdmin: PublicKey) => Promise<{
             signature: string;
             globalConfigPda: PublicKey;
         }>;
@@ -182,6 +179,7 @@ declare const _default: {
             paymentType: number;
             name: string;
             paymentAmount: anchor.BN;
+            acceptedMint: PublicKey;
             agentToken: PublicKey;
         }) => Promise<{
             signature: string;
@@ -207,6 +205,7 @@ declare const _default: {
                 paymentType: anchor.BN;
                 name: string;
                 paymentAmount: anchor.BN;
+                acceptedMint: anchor.web3.PublicKey;
                 agentToken: anchor.web3.PublicKey;
                 bump: number;
             };

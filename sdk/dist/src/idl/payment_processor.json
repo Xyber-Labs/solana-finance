@@ -10,11 +10,7 @@
         {
             "name": "initialize",
             "docs": [
-                "One-time program initialization by the admin.",
-                "",
-                "* `accepted_mint`  – SPL-Token mint that the program will accept as payment.",
-                "* `prompt_price`   – Reference price for a single prompt, expressed in the *accepted",
-                "mint’s smallest units (no oracle look-ups for now)."
+                "One-time program initialization by the admin."
             ],
             "discriminator": [
                 175,
@@ -65,12 +61,8 @@
             ],
             "args": [
                 {
-                    "name": "accepted_mint",
+                    "name": "new_admin",
                     "type": "pubkey"
-                },
-                {
-                    "name": "prompt_price",
-                    "type": "u64"
                 }
             ]
         },
@@ -276,6 +268,10 @@
                     "type": "u64"
                 },
                 {
+                    "name": "accepted_mint",
+                    "type": "pubkey"
+                },
+                {
                     "name": "agent_token",
                     "type": "pubkey"
                 }
@@ -358,6 +354,11 @@
             "code": 6003,
             "name": "PriceMismatch",
             "msg": "Provided price does not match operation price"
+        },
+        {
+            "code": 6004,
+            "name": "Unauthorized",
+            "msg": "Caller is not authorized to modify the global config"
         }
     ],
     "types": [
@@ -369,14 +370,6 @@
                     {
                         "name": "admin",
                         "type": "pubkey"
-                    },
-                    {
-                        "name": "accepted_mint",
-                        "type": "pubkey"
-                    },
-                    {
-                        "name": "prompt_price",
-                        "type": "u64"
                     },
                     {
                         "name": "bump",
@@ -401,6 +394,10 @@
                     {
                         "name": "payment_amount",
                         "type": "u64"
+                    },
+                    {
+                        "name": "accepted_mint",
+                        "type": "pubkey"
                     },
                     {
                         "name": "agent_token",

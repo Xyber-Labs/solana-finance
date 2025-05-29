@@ -66,11 +66,11 @@ exports.default = {
                 new anchor.BN(paymentType).toArrayLike(Buffer, "le", 8),
             ], program.programId);
         }
-        function initialize(args) {
+        function initialize(newAdmin) {
             return __awaiter(this, void 0, void 0, function* () {
                 const [globalConfigPda] = getGlobalConfigPda();
                 const signature = yield program.methods
-                    .initialize(args.acceptedMint, args.promptPrice)
+                    .initialize(newAdmin)
                     .accountsStrict({
                     globalConfig: globalConfigPda,
                     admin: payer,
@@ -85,7 +85,7 @@ exports.default = {
                 const [operationPda] = getOperationPda(args.paymentType);
                 const [globalConfigPda] = getGlobalConfigPda();
                 const signature = yield program.methods
-                    .setOperation(new anchor.BN(args.paymentType), args.name, args.paymentAmount, args.agentToken)
+                    .setOperation(new anchor.BN(args.paymentType), args.name, args.paymentAmount, args.acceptedMint, args.agentToken)
                     .accountsStrict({
                     globalConfig: globalConfigPda,
                     operation: operationPda,
@@ -99,10 +99,10 @@ exports.default = {
         function pay(args) {
             return __awaiter(this, void 0, void 0, function* () {
                 var _a, _b;
-                const { globalConfig } = yield getGlobalConfig();
-                if (!globalConfig)
-                    throw new Error("GlobalConfig not found");
-                const acceptedMint = globalConfig.acceptedMint;
+                const { operation } = yield getOperation(args.paymentType);
+                if (!operation)
+                    throw new Error("Operation not found");
+                const acceptedMint = operation.acceptedMint;
                 const agentWallet = args.agentWallet;
                 const userToken = (_a = args.userPaymentToken) !== null && _a !== void 0 ? _a : (0, spl_token_1.getAssociatedTokenAddressSync)(acceptedMint, payer);
                 const receiverToken = (_b = args.receiverToken) !== null && _b !== void 0 ? _b : (0, spl_token_1.getAssociatedTokenAddressSync)(acceptedMint, agentWallet, true);

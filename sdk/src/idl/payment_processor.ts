@@ -56,7 +56,7 @@ export type PaymentProcessor = {
           }
         },
         {
-          "name": "authority",
+          "name": "admin",
           "writable": true,
           "signer": true
         },
