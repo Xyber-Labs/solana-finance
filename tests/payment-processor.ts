@@ -42,22 +42,13 @@ describe("payment‑processor (SDK)", () => {
   });
 
   it("initializes the global config via SDK", async () => {
-    const promptPrice = new anchor.BN(1_000_000); // 1 token (10^6 in 6‑decimals)
-
-    const { signature } = await sdk.initialize({
-      acceptedMint,
-      promptPrice,
-    });
+    const { signature } = await sdk.initialize(provider.publicKey);
     console.log("initialize tx:", signature);
 
     const { globalConfig } = await sdk.getGlobalConfig();
     if (!globalConfig) throw new Error("GlobalConfig not found after init");
 
-    // Basic expectations
-    expect(globalConfig.acceptedMint.toBase58()).to.equal(
-      acceptedMint.toBase58(),
-    );
-    expect(globalConfig.promptPrice.toNumber()).to.equal(promptPrice.toNumber());
+    expect(globalConfig.admin.toBase58()).to.equal(provider.publicKey.toBase58());
   });
 
   it("registers an operation via SDK", async () => {
@@ -70,6 +61,7 @@ describe("payment‑processor (SDK)", () => {
       paymentType,
       name,
       paymentAmount,
+      acceptedMint,
       agentToken,
     });
     console.log("setOperation tx:", signature);
@@ -81,6 +73,7 @@ describe("payment‑processor (SDK)", () => {
     expect(operation.paymentAmount.toNumber()).to.equal(
       paymentAmount.toNumber(),
     );
+    expect(operation.acceptedMint.toBase58()).to.equal(acceptedMint.toBase58());
     expect(operation.agentToken.toBase58()).to.equal(agentToken.toBase58());
   });
 
@@ -89,6 +82,10 @@ describe("payment‑processor (SDK)", () => {
     const paymentId = Uint8Array.from(Array(32).fill(7)); // arbitrary 32‑byte id
 
     // --- create actual on‑chain token accounts ---
+    const { operation } = await sdk.getOperation(paymentType);
+    if (!operation) throw new Error("Operation not found");
+    const acceptedMint = operation.acceptedMint as PublicKey;
+
     const userAta = await createAssociatedTokenAccount(
       provider.connection,
       provider.wallet.payer,          // payer of rent / fees
@@ -134,3 +131,13 @@ describe("payment‑processor (SDK)", () => {
     expect(BigInt(receiverBalAfter) - BigInt(receiverBalBefore)).to.equal(2_000_000n);
   });
 });
+
+  it("re-initializes the global config with same admin", async () => {
+    const { signature } = await sdk.initialize(provider.publicKey);
+    console.log("re-initialize tx:", signature);
+
+    const { globalConfig } = await sdk.getGlobalConfig();
+    if (!globalConfig) throw new Error("GlobalConfig not found after re-init");
+
+    expect(globalConfig.admin.toBase58()).to.equal(provider.publicKey.toBase58());
+  });

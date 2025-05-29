@@ -16,11 +16,7 @@ export type PaymentProcessor = {
     {
       "name": "initialize",
       "docs": [
-        "One-time program initialization by the admin.",
-        "",
-        "* `accepted_mint`  – SPL-Token mint that the program will accept as payment.",
-        "* `prompt_price`   – Reference price for a single prompt, expressed in the *accepted",
-        "mint’s smallest units (no oracle look-ups for now)."
+        "One-time program initialization by the admin."
       ],
       "discriminator": [
         175,
@@ -60,7 +56,7 @@ export type PaymentProcessor = {
           }
         },
         {
-          "name": "admin",
+          "name": "authority",
           "writable": true,
           "signer": true
         },
@@ -71,12 +67,8 @@ export type PaymentProcessor = {
       ],
       "args": [
         {
-          "name": "acceptedMint",
+          "name": "newAdmin",
           "type": "pubkey"
-        },
-        {
-          "name": "promptPrice",
-          "type": "u64"
         }
       ]
     },
@@ -282,6 +274,10 @@ export type PaymentProcessor = {
           "type": "u64"
         },
         {
+          "name": "acceptedMint",
+          "type": "pubkey"
+        },
+        {
           "name": "agentToken",
           "type": "pubkey"
         }
@@ -364,6 +360,11 @@ export type PaymentProcessor = {
       "code": 6003,
       "name": "priceMismatch",
       "msg": "Provided price does not match operation price"
+    },
+    {
+      "code": 6004,
+      "name": "unauthorized",
+      "msg": "Caller is not authorized to modify the global config"
     }
   ],
   "types": [
@@ -375,14 +376,6 @@ export type PaymentProcessor = {
           {
             "name": "admin",
             "type": "pubkey"
-          },
-          {
-            "name": "acceptedMint",
-            "type": "pubkey"
-          },
-          {
-            "name": "promptPrice",
-            "type": "u64"
           },
           {
             "name": "bump",
@@ -407,6 +400,10 @@ export type PaymentProcessor = {
           {
             "name": "paymentAmount",
             "type": "u64"
+          },
+          {
+            "name": "acceptedMint",
+            "type": "pubkey"
           },
           {
             "name": "agentToken",

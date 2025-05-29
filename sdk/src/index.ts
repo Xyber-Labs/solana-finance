@@ -37,14 +37,11 @@ export default {
             );
         }
 
-        async function initialize(args: {
-            acceptedMint: PublicKey;
-            promptPrice: anchor.BN;
-        }): Promise<{ signature: string; globalConfigPda: PublicKey }> {
+        async function initialize(newAdmin: PublicKey): Promise<{ signature: string; globalConfigPda: PublicKey }> {
             const [globalConfigPda] = getGlobalConfigPda();
 
             const signature = await program.methods
-                .initialize(args.acceptedMint, args.promptPrice)
+                .initialize(newAdmin)
                 .accountsStrict({
                     globalConfig: globalConfigPda,
                     admin: payer,
@@ -59,6 +56,7 @@ export default {
             paymentType: number;
             name: string;
             paymentAmount: anchor.BN;
+            acceptedMint: PublicKey;
             agentToken: PublicKey;
         }): Promise<{ signature: string; operationPda: PublicKey }> {
             const [operationPda] = getOperationPda(args.paymentType);
@@ -69,6 +67,7 @@ export default {
                     new anchor.BN(args.paymentType),
                     args.name,
                     args.paymentAmount,
+                    args.acceptedMint,
                     args.agentToken,
                 )
                 .accountsStrict({
@@ -90,10 +89,10 @@ export default {
             userPaymentToken?: PublicKey;
             receiverToken?: PublicKey;
         }): Promise<{ signature: string }> {
-            const { globalConfig } = await getGlobalConfig();
-            if (!globalConfig) throw new Error("GlobalConfig not found");
+            const { operation } = await getOperation(args.paymentType);
+            if (!operation) throw new Error("Operation not found");
 
-            const acceptedMint = globalConfig.acceptedMint as PublicKey;
+            const acceptedMint = operation.acceptedMint as PublicKey;
             const agentWallet = args.agentWallet;
 
             const userToken =

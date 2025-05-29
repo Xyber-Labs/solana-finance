@@ -10,19 +10,17 @@ pub mod payment_processor {
     use super::*;
 
     /// One-time program initialization by the admin.
-    ///
-    /// * `accepted_mint`  – SPL-Token mint that the program will accept as payment.
-    /// * `prompt_price`   – Reference price for a single prompt, expressed in the *accepted
-    ///                       mint’s smallest units (no oracle look-ups for now).
-    pub fn initialize(
-        ctx: Context<Initialize>,
-        accepted_mint: Pubkey,
-        prompt_price: u64,
-    ) -> Result<()> {
+    pub fn initialize(ctx: Context<Initialize>, new_admin: Pubkey) -> Result<()> {
         let cfg = &mut ctx.accounts.global_config;
-        cfg.admin = ctx.accounts.admin.key();
-        cfg.accepted_mint = accepted_mint;
-        cfg.prompt_price = prompt_price;
+        // Allow re-initialization only by the current admin
+        if cfg.admin != Pubkey::default() {
+            require_keys_eq!(
+                cfg.admin,
+                ctx.accounts.admin.key(),
+                XyberError::Unauthorized
+            );
+        }
+        cfg.admin = new_admin;
         cfg.bump = ctx.bumps.global_config;
         Ok(())
     }
@@ -33,6 +31,7 @@ pub mod payment_processor {
         payment_type: u64,
         name: String,
         payment_amount: u64,
+        accepted_mint: Pubkey,
         agent_token: Pubkey,
     ) -> Result<()> {
         require!(name.len() <= 64, XyberError::NameTooLong);
@@ -41,6 +40,7 @@ pub mod payment_processor {
         operation.payment_type = payment_type;
         operation.name = name.clone();
         operation.payment_amount = payment_amount;
+        operation.accepted_mint = accepted_mint;
         operation.agent_token = agent_token;
         operation.bump = ctx.bumps.operation;
 
@@ -56,18 +56,9 @@ pub mod payment_processor {
     /// Pay for a prompt (or any other registered operation).
     pub fn pay(ctx: Context<Pay>, payment_type: u64, price: u64, payment_id: [u8; 32]) -> Result<()> {
         let op = &ctx.accounts.operation;
-        let cfg = &ctx.accounts.global_config;
 
-        require_keys_eq!(
-            ctx.accounts.user_payment_token.mint,
-            cfg.accepted_mint,
-            XyberError::UnsupportedMint
-        );
-        require_keys_eq!(
-            ctx.accounts.receiver_token.mint,
-            cfg.accepted_mint,
-            XyberError::UnsupportedMint
-        );
+        require_keys_eq!(ctx.accounts.user_payment_token.mint, op.accepted_mint, XyberError::UnsupportedMint);
+        require_keys_eq!(ctx.accounts.receiver_token.mint, op.accepted_mint, XyberError::UnsupportedMint);
 
         require!(price == op.payment_amount, XyberError::PriceMismatch);
         require_keys_eq!(
@@ -89,7 +80,7 @@ pub mod payment_processor {
 
         emit!(OperationPaid {
             payment_type,
-            payment_mint: cfg.accepted_mint,
+            payment_mint: op.accepted_mint,
             payment_id,
             payment_amount: amount,
             payer: ctx.accounts.payer.key(),
@@ -102,7 +93,7 @@ pub mod payment_processor {
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     #[account(
-        init,
+        init_if_needed,
         seeds = [b"global-config"],
         bump,
         payer = admin,
@@ -159,7 +150,7 @@ pub struct Pay<'info> {
 
     #[account(
         mut,
-        token::mint = global_config.accepted_mint,
+        token::mint = operation.accepted_mint,
         token::authority = payer,
     )]
     pub user_payment_token: Account<'info, TokenAccount>,
@@ -169,7 +160,7 @@ pub struct Pay<'info> {
 
     #[account(
         mut,
-        token::mint = global_config.accepted_mint,
+        token::mint = operation.accepted_mint,
     )]
     pub receiver_token: Account<'info, TokenAccount>,
 
@@ -182,13 +173,11 @@ pub struct Pay<'info> {
 #[account]
 pub struct GlobalConfig {
     pub admin: Pubkey,
-    pub accepted_mint: Pubkey,
-    pub prompt_price: u64,
-    pub bump: u8,
+    pub bump: u8
 }
 
 impl GlobalConfig {
-    const SIZE: usize = 32 + 32 + 8 + 1;
+    const SIZE: usize = 32 + 1;
 }
 
 #[account]
@@ -196,12 +185,13 @@ pub struct Operation {
     pub payment_type: u64,
     pub name: String,
     pub payment_amount: u64,
+    pub accepted_mint: Pubkey,
     pub agent_token: Pubkey,
     pub bump: u8,
 }
 
 impl Operation {
-    pub const SIZE: usize = 128;
+    pub const SIZE: usize = 200;
 }
 
 #[event]
@@ -232,4 +222,6 @@ pub enum XyberError {
     WrongReceiver,
     #[msg("Provided price does not match operation price")]
     PriceMismatch,
+    #[msg("Caller is not authorized to modify the global config")]
+    Unauthorized,
 }
